@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiểm Tra: Trồng Cải Xanh</title>
+    
+    <!-- React & Tailwind -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; transition: all 0.3s ease; }
+        .font-header { font-family: 'Orbitron', sans-serif; }
+        .font-code { font-family: 'JetBrains Mono', monospace; }
+        
+        .scanline {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.05) 51%);
+            background-size: 100% 4px; opacity: 0.3;
+        }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .option-card { transition: all 0.2s; cursor: pointer; }
+        .option-card:hover { transform: translateX(5px); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.4); border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="env,react">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ICONS ---
+        const Icon = ({ d, className }) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d={d}/></svg>;
+        const Icons = {
+            User: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+            School: "M3 21h18 M5 21V7l8-4 8 4v14 M8 21v-9a4 4 0 0 1 8 0v9",
+            Check: "M20 6L9 17l-5-5",
+            Settings: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z",
+            List: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+            Trash: "M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2",
+            Sun: "M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z",
+            Moon: "M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z",
+            Leaf: "M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12",
+            Book: "M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+        };
+
+        // --- KNOWLEDGE DATA (ÔN TẬP) ---
+        const KNOWLEDGE_DATA = [
+            { title: "I. Chuẩn bị trồng", items: [
+                "Thời vụ: Quanh năm (tốt nhất vụ Đông Xuân).",
+                "Đất trồng: Đất thịt nhẹ, đất cát pha, tơi xốp, giàu mùn.",
+                "Hạt giống: Xử lý nước ấm (2 sôi : 3 lạnh) trong 3-4 giờ.",
+                "Bón lót: Dùng phân hữu cơ, phân lân để cải tạo đất."
+            ]},
+            { title: "II. Quy trình gieo trồng", items: [
+                "Gieo hạt: Gieo vãi hoặc gieo hàng. Lấp đất mỏng, phủ rơm rạ.",
+                "Mật độ: Không gieo quá dày để cây phát triển tốt."
+            ]},
+            { title: "III. Chăm sóc", items: [
+                "Tỉa cây: Loại bỏ cây yếu, sâu bệnh, đảm bảo khoảng cách.",
+                "Làm cỏ, vun xới: Giúp đất thoáng khí, diệt cỏ dại.",
+                "Tưới nước: Ngày 2 lần (sáng sớm, chiều mát).",
+                "Bón thúc: Dùng phân đạm, phân NPK hòa tan tưới gốc.",
+                "Phòng trừ sâu bệnh: Ưu tiên biện pháp thủ công, sinh học (IPM)."
+            ]},
+            { title: "IV. Thu hoạch", items: [
+                "Thời gian: Sau 30-40 ngày.",
+                "Cách thức: Nhổ cả cây hoặc dùng dao cắt sát gốc.",
+                "Lưu ý: Ngừng bón phân đạm trước thu hoạch 7-10 ngày."
+            ]}
+        ];
+
+        // --- QUESTION BANK (30 Câu - Nội dung Trồng Cải Xanh) ---
+        const QUESTION_BANK = [
+            // CHUẨN BỊ & GIEO HẠT
+            { q: "Cây cải xanh thích hợp nhất với loại đất nào?", options: ["Đất thịt nhẹ, tơi xốp", "Đất sét nặng", "Đất ngập nước", "Đất nhiễm mặn"], a: "Đất thịt nhẹ, tơi xốp" },
+            { q: "Xử lý hạt giống cải xanh bằng nước ấm theo tỉ lệ nào?", options: ["2 sôi : 3 lạnh", "3 sôi : 2 lạnh", "1 sôi : 1 lạnh", "Nước sôi 100 độ"], a: "2 sôi : 3 lạnh" },
+            { q: "Thời gian ngâm hạt giống cải xanh khoảng bao lâu?", options: ["3 - 4 giờ", "12 - 24 giờ", "10 phút", "1 tuần"], a: "3 - 4 giờ" },
+            { q: "Mục đích của việc phủ rơm rạ sau khi gieo hạt là gì?", options: ["Giữ ẩm và tránh trôi hạt", "Làm đẹp luống", "Để cỏ không mọc", "Để bón phân"], a: "Giữ ẩm và tránh trôi hạt" },
+            { q: "Vụ gieo trồng cải xanh tốt nhất trong năm là?", options: ["Vụ Đông Xuân", "Vụ Hè Thu (nắng nóng)", "Mùa mưa bão", "Quanh năm như nhau"], a: "Vụ Đông Xuân" },
+            { q: "Trước khi gieo hạt, đất cần được làm như thế nào?", options: ["Cày bừa, làm nhỏ, lên luống", "Để nguyên đất cứng", "Ngâm nước ngập", "Phơi khô nứt nẻ"], a: "Cày bừa, làm nhỏ, lên luống" },
+            { q: "Loại phân nào thường dùng để BÓN LÓT khi làm đất?", options: ["Phân hữu cơ (chuồng hoai mục)", "Phân đạm", "Phân bón lá", "Thuốc trừ sâu"], a: "Phân hữu cơ (chuồng hoai mục)" },
+
+            // CHĂM SÓC
+            { q: "Khi cây cải mọc quá dày, ta cần thực hiện thao tác gì?", options: ["Tỉa cây", "Bón thêm phân", "Tưới ngập nước", "Phun thuốc kích thích"], a: "Tỉa cây" },
+            { q: "Mục đích của việc vun xới là gì?", options: ["Giúp đất thoáng khí, cây đứng vững", "Làm chặt đất", "Diệt côn trùng", "Tăng độ ẩm"], a: "Giúp đất thoáng khí, cây đứng vững" },
+            { q: "Nên tưới nước cho rau cải vào thời điểm nào?", options: ["Sáng sớm và chiều mát", "Giữa trưa nắng", "Chỉ tưới ban đêm", "3 ngày 1 lần"], a: "Sáng sớm và chiều mát" },
+            { q: "Bón thúc cho cải xanh thường sử dụng loại phân nào?", options: ["Phân đạm hoặc NPK", "Vôi bột", "Thuốc diệt cỏ", "Cát"], a: "Phân đạm hoặc NPK" },
+            { q: "Biện pháp phòng trừ sâu bệnh nào được ưu tiên sử dụng?", options: ["Biện pháp thủ công, sinh học", "Dùng thuốc hóa học liều cao", "Đốt luống rau", "Không cần phòng trừ"], a: "Biện pháp thủ công, sinh học" },
+            { q: "Nếu thấy sâu non mới xuất hiện trên lá rau, em nên làm gì?", options: ["Bắt bằng tay (thủ công)", "Phun thuốc hóa học ngay", "Nhổ bỏ cả luống", "Tưới nước sôi"], a: "Bắt bằng tay (thủ công)" },
+            { q: "Làm cỏ dại có tác dụng gì?", options: ["Tránh cạnh tranh dinh dưỡng với cây trồng", "Làm đẹp vườn", "Tăng sâu bệnh", "Giảm ánh sáng"], a: "Tránh cạnh tranh dinh dưỡng với cây trồng" },
+            { q: "Thời điểm bón thúc lần 1 thường là khi nào?", options: ["Cây có 3-4 lá thật", "Khi vừa gieo hạt", "Trước khi thu hoạch 1 ngày", "Khi cây ra hoa"], a: "Cây có 3-4 lá thật" },
+
+            // THU HOẠCH & AN TOÀN
+            { q: "Cây cải xanh có thể thu hoạch sau bao nhiêu ngày gieo trồng?", options: ["30 - 40 ngày", "10 - 15 ngày", "3 - 4 tháng", "1 năm"], a: "30 - 40 ngày" },
+            { q: "Cách thu hoạch cải xanh phổ biến là gì?", options: ["Nhổ cả cây hoặc cắt sát gốc", "Hái từng lá", "Chỉ cắt ngọn", "Đào lấy rễ"], a: "Nhổ cả cây hoặc cắt sát gốc" },
+            { q: "Để đảm bảo an toàn, cần ngừng bón phân đạm trước khi thu hoạch bao lâu?", options: ["7 - 10 ngày", "1 - 2 ngày", "Không cần ngừng", "1 tháng"], a: "7 - 10 ngày" },
+            { q: "Dấu hiệu nào cho thấy cải xanh đã đến lúc thu hoạch?", options: ["Cây to, lá xanh mướt, đủ ngày", "Cây ra hoa vàng", "Cây bị sâu ăn hết lá", "Cây mới nảy mầm"], a: "Cây to, lá xanh mướt, đủ ngày" },
+            { q: "Sau khi thu hoạch, cần làm gì với đất để chuẩn bị vụ sau?", options: ["Vệ sinh đồng ruộng, phơi đất", "Trồng ngay cây khác", "Để cỏ mọc um tùm", "Tưới đẫm nước"], a: "Vệ sinh đồng ruộng, phơi đất" },
+
+            // CÂU HỎI KHÁC
+            { q: "Luống trồng cải xanh nên có bề mặt như thế nào?", options: ["Bằng phẳng, tơi xốp", "Gồ ghề", "Nhiều sỏi đá", "Ngập nước"], a: "Bằng phẳng, tơi xốp" },
+            { q: "Nhiệt độ nước 54 độ C tương ứng với tỉ lệ pha nào?", options: ["2 sôi : 3 lạnh", "1 sôi : 1 lạnh", "3 sôi : 2 lạnh", "100% nước sôi"], a: "2 sôi : 3 lạnh" },
+            { q: "Tại sao không nên tưới nước vào giữa trưa nắng?", options: ["Cây dễ bị sốc nhiệt, héo lá", "Tốn nước", "Nước bốc hơi chậm", "Làm mát rễ quá mức"], a: "Cây dễ bị sốc nhiệt, héo lá" },
+            { q: "IPM trong bảo vệ thực vật nghĩa là gì?", options: ["Quản lý dịch hại tổng hợp", "Phun thuốc định kỳ", "Trồng rau trong nhà kính", "Nhập khẩu giống ngoại"], a: "Quản lý dịch hại tổng hợp" },
+            { q: "Khoảng cách giữa các cây khi tỉa thưa nên là bao nhiêu?", options: ["10 - 15 cm", "1 - 2 cm", "50 cm", "1 mét"], a: "10 - 15 cm" },
+            { q: "Vật liệu nào dùng để phủ luống giữ ẩm?", options: ["Rơm rạ băm nhỏ", "Ni lông kín mít", "Gạch đá", "Tấm tôn"], a: "Rơm rạ băm nhỏ" },
+            { q: "Bộ phận sử dụng chính của cây cải xanh là gì?", options: ["Lá và thân", "Rễ (Củ)", "Quả", "Hạt"], a: "Lá và thân" },
+            { q: "Cải xanh thuộc nhóm rau nào?", options: ["Rau ăn lá", "Rau ăn củ", "Rau ăn quả", "Rau gia vị"], a: "Rau ăn lá" },
+            { q: "Đất chua cần xử lý bằng gì trước khi trồng?", options: ["Vôi bột", "Muối ăn", "Đường", "Nước lạnh"], a: "Vôi bột" },
+            { q: "Gieo hạt quá dày sẽ dẫn đến hậu quả gì?", options: ["Cây còi cọc, cạnh tranh dinh dưỡng", "Cây phát triển rất nhanh", "Tiết kiệm đất", "Dễ thu hoạch"], a: "Cây còi cọc, cạnh tranh dinh dưỡng" }
+        ];
+
+        // --- STORAGE ---
+        const STORAGE_KEY = 'congnghe7_bai5_scores';
+        const saveScore = (name, cls, score) => {
+            try {
+                const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                history.unshift({ id: Date.now(), name, cls, score, date: new Date().toLocaleString() });
+                if(history.length > 100) history.pop();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+                return history;
+            } catch(e) { return []; }
+        };
+
+        // --- THEMES ---
+        const THEMES = {
+            dark: { bg: 'bg-slate-900', text: 'text-gray-100', panel: 'bg-slate-800', border: 'border-slate-600', accent: 'text-green-400', btn: 'bg-green-600 hover:bg-green-500' },
+            light: { bg: 'bg-green-50', text: 'text-gray-800', panel: 'bg-white', border: 'border-green-200', accent: 'text-green-700', btn: 'bg-green-600 hover:bg-green-500' },
+        };
+        const TEXT_COLORS = { white: 'text-white', black: 'text-black', yellow: 'text-yellow-400', green: 'text-green-400' };
+        const BG_COLORS = { slate: 'bg-slate-900', green: 'bg-green-950', gray: 'bg-gray-100', teal: 'bg-teal-950' };
+
+        // --- APP ---
+        function App() {
+            // Settings
+            const [darkMode, setDarkMode] = useState(true);
+            const [brightness, setBrightness] = useState(100);
+            const [customTxtColor, setCustomTxtColor] = useState('white');
+            const [customBg, setCustomBg] = useState('slate');
+            const [showSettings, setShowSettings] = useState(false);
+
+            // App State
+            const [screen, setScreen] = useState('login'); // login, review, test, result
+            const [user, setUser] = useState({ name: '', class: '' });
+            const [testQuestions, setTestQuestions] = useState([]);
+            const [currentQ, setCurrentQ] = useState(0);
+            const [answers, setAnswers] = useState({});
+            const [score, setScore] = useState(0);
+
+            // Styles
+            const theme = darkMode ? THEMES.dark : THEMES.light;
+            const activeBg = darkMode ? BG_COLORS[customBg] : (customBg === 'gray' ? 'bg-gray-100' : 'bg-white');
+            const activeTxt = TEXT_COLORS[customTxtColor];
+
+            // --- LOGIC ---
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if(user.name && user.class) setScreen('review');
+            };
+
+            const startTest = () => {
+                // 1. Chọn ngẫu nhiên 10 câu từ 30 câu
+                const randomQuestions = QUESTION_BANK.sort(() => 0.5 - Math.random()).slice(0, 10);
+                
+                // 2. Xáo trộn vị trí đáp án cho mỗi câu hỏi
+                const processedQuestions = randomQuestions.map(q => {
+                    const shuffledOptions = [...q.options].sort(() => 0.5 - Math.random());
+                    return { ...q, options: shuffledOptions };
+                });
+
+                setTestQuestions(processedQuestions);
+                setCurrentQ(0);
+                setAnswers({});
+                setScreen('test');
+            };
+
+            const handleAnswer = (opt) => {
+                setAnswers(prev => ({...prev, [currentQ]: opt}));
+            };
+
+            const navigateQ = (idx) => setCurrentQ(idx);
+
+            const submitTest = () => {
+                if(!confirm("Nộp bài và xem điểm?")) return;
+                let s = 0;
+                testQuestions.forEach((q, i) => {
+                    if(answers[i] === q.a) s++;
+                });
+                setScore(s);
+                saveScore(user.name, user.class, s);
+                if(s >= 8) confetti();
+                setScreen('result');
+            };
+
+            // --- VIEWS ---
+
+            // 1. LOGIN
+            if(screen === 'login') return (
+                <div className={`h-screen w-screen flex items-center justify-center ${activeBg} ${theme.text} relative overflow-hidden`} style={{filter: `brightness(${brightness}%)`}}>
+                    <div className="scanline"></div>
+                    <div className={`p-8 rounded-2xl border-2 ${theme.border} ${theme.panel} shadow-2xl w-96 z-10 fade-in`}>
+                        <div className="flex justify-center mb-4"><div className="w-16 h-16 rounded-full bg-green-900/50 flex items-center justify-center border-2 border-green-500"><Icon d={Icons.Leaf} className="w-8 h-8 text-green-400"/></div></div>
+                        <h1 className="font-header text-2xl text-center mb-2 font-bold text-green-500 tracking-wider">TRỒNG CẢI XANH</h1>
+                        <p className="text-center text-xs opacity-70 mb-6">CÔNG NGHỆ 7 - BÀI 5</p>
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold uppercase opacity-70 ml-1">Họ và Tên</label>
+                                <div className="relative"><Icon d={Icons.User} className="absolute left-3 top-3 w-4 h-4 opacity-50"/><input required type="text" className="w-full bg-black/20 border border-gray-500 rounded-lg py-2.5 pl-9 focus:border-green-500 outline-none" placeholder="Nhập tên..." onChange={e=>setUser({...user, name: e.target.value})}/></div>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase opacity-70 ml-1">Lớp</label>
+                                <div className="relative"><Icon d={Icons.School} className="absolute left-3 top-3 w-4 h-4 opacity-50"/><input required type="text" className="w-full bg-black/20 border border-gray-500 rounded-lg py-2.5 pl-9 focus:border-green-500 outline-none" placeholder="VD: 7A1" onChange={e=>setUser({...user, class: e.target.value})}/></div>
+                            </div>
+                            <button type="submit" className={`w-full ${theme.btn} text-white font-bold py-3 rounded-lg shadow-lg mt-4`}>VÀO ÔN TẬP</button>
+                        </form>
+                    </div>
+                    <div className="absolute top-4 right-4"><button onClick={()=>setShowSettings(!showSettings)} className="p-2 bg-black/20 rounded-full hover:bg-black/40"><Icon d={Icons.Settings} className="w-6 h-6"/></button></div>
+                    {showSettings && <SettingsMenu darkMode={darkMode} setDarkMode={setDarkMode} brightness={brightness} setBrightness={setBrightness} setCustomBg={setCustomBg} setCustomTxtColor={setCustomTxtColor} />}
+                </div>
+            );
+
+            // 2. REVIEW
+            if(screen === 'review') return (
+                <div className={`h-screen w-screen flex flex-col ${activeBg} ${theme.text} relative overflow-hidden`} style={{filter: `brightness(${brightness}%)`}}>
+                    <div className="scanline"></div>
+                    <div className="flex-1 overflow-y-auto p-8 z-10">
+                        <div className={`max-w-4xl mx-auto ${theme.panel} border ${theme.border} rounded-2xl p-8 shadow-2xl fade-in`}>
+                            <div className="flex items-center gap-4 mb-6 border-b border-gray-500/30 pb-4">
+                                <Icon d={Icons.Book} className={`w-8 h-8 ${theme.accent}`}/>
+                                <h1 className={`text-2xl font-header font-bold ${theme.accent}`}>TÓM TẮT KIẾN THỨC</h1>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {KNOWLEDGE_DATA.map((section, idx) => (
+                                    <div key={idx}>
+                                        <h3 className="font-bold text-lg mb-3 text-yellow-500 border-b border-gray-600 pb-2">{section.title}</h3>
+                                        <ul className="space-y-2 text-sm">
+                                            {section.items.map((item, i) => (
+                                                <li key={i} className="flex gap-2 items-start opacity-90">
+                                                    <Icon d={Icons.Check} className="w-4 h-4 text-green-500 mt-0.5 shrink-0"/>
+                                                    <span>{item}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 text-center">
+                                <p className="mb-4 italic opacity-70">Hãy đọc kỹ trước khi bắt đầu. 10 câu hỏi ngẫu nhiên sẽ được chọn từ ngân hàng đề.</p>
+                                <button onClick={startTest} className={`px-10 py-4 ${theme.btn} text-white font-bold text-xl rounded-xl shadow-lg animate-pulse`}>BẮT ĐẦU KIỂM TRA</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            // 3. TEST
+            if(screen === 'test') {
+                const q = testQuestions[currentQ];
+                return (
+                    <div className={`h-screen w-screen flex flex-col ${activeBg} ${theme.text} relative ${activeTxt}`} style={{filter: `brightness(${brightness}%)`}}>
+                        <div className="scanline"></div>
+                        <header className={`h-20 flex justify-between items-center px-8 border-b ${theme.border} ${theme.panel} z-20 shrink-0`}>
+                            <div>
+                                <h1 className={`font-header text-2xl font-bold ${theme.accent}`}>KIỂM TRA 15 PHÚT</h1>
+                                <div className="text-xs opacity-70 font-mono mt-1">Học sinh: {user.name} - Lớp: {user.class}</div>
+                            </div>
+                            <div className="flex gap-2 flex-wrap justify-center">
+                                {testQuestions.map((_, i) => (
+                                    <button key={i} onClick={()=>navigateQ(i)} className={`w-8 h-8 rounded font-bold text-xs border transition-all ${currentQ===i ? 'bg-white text-black scale-110' : answers[i] ? `${theme.btn} text-white border-transparent` : 'border-gray-500 opacity-50 hover:opacity-100'}`}>
+                                        {i+1}
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={submitTest} className="px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded shadow-lg">NỘP BÀI</button>
+                        </header>
+
+                        <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto z-10">
+                            <div className={`w-full max-w-3xl ${theme.panel} border-2 ${theme.border} rounded-2xl p-10 shadow-2xl slide-in`}>
+                                <div className="mb-6">
+                                    <span className="text-xs font-bold px-3 py-1 bg-gray-700 rounded text-white mb-2 inline-block">Câu {currentQ+1}</span>
+                                    <h2 className="text-xl md:text-2xl font-medium leading-relaxed">{q.q}</h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4">
+                                    {q.options.map((opt, idx) => (
+                                        <button 
+                                            key={idx} 
+                                            onClick={() => handleAnswer(opt)}
+                                            className={`option-card p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${answers[currentQ] === opt ? 'selected bg-green-500/20 border-green-500' : `border-gray-600 hover:border-gray-400`}`}
+                                        >
+                                            <span className="font-bold mr-4 opacity-50">{String.fromCharCode(65+idx)}.</span>
+                                            <span className="text-lg">{opt}</span>
+                                            {answers[currentQ] === opt && <div className="absolute right-4 top-1/2 -translate-y-1/2 text-green-400"><Icon d={Icons.Check} className="w-6 h-6"/></div>}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="mt-10 flex justify-between">
+                                    <button onClick={()=>setCurrentQ(Math.max(0, currentQ-1))} disabled={currentQ===0} className="px-6 py-3 border border-gray-500 rounded hover:bg-white/10 disabled:opacity-30 font-bold">Câu trước</button>
+                                    {currentQ < 9 ? (
+                                        <button onClick={()=>setCurrentQ(currentQ+1)} className={`px-8 py-3 ${theme.btn} text-white rounded font-bold shadow-lg`}>Câu sau</button>
+                                    ) : (
+                                        <button onClick={submitTest} className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded font-bold shadow-lg">Hoàn thành</button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if(screen === 'result') {
+                const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                return (
+                    <div className={`h-screen w-screen flex flex-col items-center justify-center ${activeBg} ${theme.text} overflow-y-auto p-8 relative ${activeTxt}`} style={{filter: `brightness(${brightness}%)`}}>
+                        <div className={`max-w-4xl w-full ${theme.panel} border-2 ${theme.border} rounded-3xl p-8 shadow-2xl fade-in flex flex-col max-h-[90vh]`}>
+                            <h1 className={`font-header text-4xl text-center mb-4 font-bold ${theme.accent}`}>KẾT QUẢ BÀI LÀM</h1>
+                            <div className="text-center mb-8 border-b border-gray-600 pb-4">
+                                <span className="text-2xl font-bold block mb-2">{user.name} - {user.class}</span>
+                                <div className="text-8xl font-black mt-2 text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm">{score}/10</div>
+                            </div>
+                            
+                            <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-6">
+                                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar border-r border-gray-600">
+                                    <h3 className="font-bold mb-3 uppercase opacity-70 text-sm">Chi tiết</h3>
+                                    <div className="space-y-3">
+                                        {testQuestions.map((q, i) => {
+                                            const uAns = answers[i];
+                                            const isCorrect = uAns === q.a;
+                                            return (
+                                                <div key={i} className={`p-3 rounded border ${isCorrect ? 'border-green-500/30 bg-green-900/10' : 'border-red-500/30 bg-red-900/10'} flex justify-between items-center`}>
+                                                    <div className="flex-1">
+                                                        <div className="font-bold text-sm mb-1">Câu {i+1}: {q.q}</div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className={`text-xs ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>Chọn: {uAns || "Trống"}</span>
+                                                            {!isCorrect && <span className="text-xs text-yellow-500">Đ/a: {q.a}</span>}
+                                                        </div>
+                                                    </div>
+                                                    <div className={`font-bold ml-4 ${isCorrect?'text-green-500':'text-red-500'}`}>{isCorrect ? "+1" : "0"}</div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="w-80 flex flex-col">
+                                    <h3 className="font-bold mb-3 uppercase opacity-70 text-sm">Lịch sử thi</h3>
+                                    <div className="flex-1 overflow-y-auto pr-2 text-xs space-y-1 opacity-90 bg-black/20 p-2 rounded border border-gray-600">
+                                        {history.slice(0,15).map((h,k)=>(
+                                            <div key={k} className="flex justify-between border-b border-gray-700/50 pb-2 mb-2">
+                                                <div><div className="font-bold text-green-400">{h.name}</div><div className="opacity-50">{h.cls}</div></div>
+                                                <div className="font-bold text-yellow-500 text-lg">{h.score}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-gray-700 flex flex-col gap-2">
+                                        <button onClick={()=>window.location.reload()} className={`w-full py-3 ${theme.btn} rounded font-bold text-white shadow transition`}>THI LẠI</button>
+                                        <button onClick={()=>{if(confirm("Xóa toàn bộ dữ liệu?")){localStorage.removeItem(STORAGE_KEY); alert("Đã xóa"); window.location.reload();}}} className="text-xs text-red-500 hover:text-red-400 text-center mt-2">Xóa dữ liệu (Admin)</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            return null;
+        }
+
+        const SettingsMenu = ({ darkMode, setDarkMode, brightness, setBrightness, setCustomBg, setCustomTxtColor }) => (
+            <div className="bg-slate-900 border border-slate-600 p-4 rounded-xl shadow-2xl w-64 text-white text-sm absolute right-0 top-12 z-50 fade-in">
+                <h3 className="font-bold mb-3 uppercase text-gray-500">Cài đặt</h3>
+                <div className="mb-4 flex justify-between items-center"><span>Giao diện</span><button onClick={()=>setDarkMode(!darkMode)} className="p-1 rounded bg-gray-700"><Icon d={darkMode?Icons.Sun:Icons.Moon} className="w-4 h-4"/></button></div>
+                <div className="mb-4"><span>Độ sáng {brightness}%</span><input type="range" min="50" max="150" value={brightness} onChange={e=>setBrightness(e.target.value)} className="w-full h-2 bg-gray-600 rounded cursor-pointer"/></div>
+                <div className="mb-4"><span>Màu nền</span><div className="flex gap-2 mt-1">{Object.keys(BG_COLORS).map(k => <button key={k} onClick={()=>setCustomBg(k)} className={`w-6 h-6 rounded-full border border-gray-500 ${BG_COLORS[k]}`}></button>)}</div></div>
+                <div><span>Màu chữ</span><div className="flex gap-2 mt-1">{Object.keys(TEXT_COLORS).map(k => <button key={k} onClick={()=>setCustomTxtColor(k)} className={`w-6 h-6 rounded-full border border-gray-500 bg-black flex items-center justify-center font-bold ${TEXT_COLORS[k]}`}>A</button>)}</div></div>
+            </div>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
